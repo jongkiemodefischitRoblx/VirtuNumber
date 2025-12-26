@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VirtuNumber - Layanan Nomor Virtual</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,sans-serif;}
+body{background:#f3f6fb;color:#111;position:relative;overflow-x:hidden;}
+header{background:#4f46e5;color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+header h1{font-size:1.6rem;}
+button{padding:10px 20px;border:none;border-radius:8px;background:#4f46e5;color:white;font-weight:500;cursor:pointer;transition:0.3s;}
+button:hover{background:#3730a3;}
+.container{max-width:900px;margin:auto;padding:20px;}
+.hidden{display:none;}
+.box{background:white;padding:20px;border-radius:12px;margin-top:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+input{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;margin-top:10px;margin-bottom:10px;}
+.card{background:#f9fafb;padding:15px;border-radius:10px;margin:10px 0;cursor:pointer;transition:0.3s;}
+.card:hover{background:#e0e7ff;}
+.progress-bar{width:100%;background:#e5e7eb;border-radius:12px;overflow:hidden;margin:10px 0;}
+.progress{width:0%;height:15px;background:#4f46e5;transition:0.3s;}
+.popup{position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:12px 20px;border-radius:12px;display:none;z-index:1000;}
+.coin{position:fixed;width:14px;height:14px;background:gold;border-radius:50%;animation:drop 1s forwards;}
+@keyframes drop{0%{transform:translateY(0) scale(1);}100%{transform:translateY(300px) scale(0.5);opacity:0;}}
+.confetti{position:fixed;width:10px;height:10px;top:0;animation:confettiDrop 2s linear forwards;}
+@keyframes confettiDrop{0%{transform:translateY(0) rotate(0deg);}100%{transform:translateY(500px) rotate(360deg);opacity:0;}}
+.side-menu{position:fixed;top:80px;right:10px;background:white;border-radius:12px;padding:10px;display:none;box-shadow:0 2px 12px rgba(0,0,0,0.15);z-index:999;}
+.side-menu button{display:block;width:100%;margin-bottom:8px;transition:0.2s;}
+.side-menu button:hover{background:#e0e7ff;}
+.toggle-menu{position:fixed;top:90px;right:10px;background:#4f46e5;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:1000;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>VirtuNumber</h1>
+<div>Coin: <span id="coinDisplay">0</span> 🪙</div>
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="login" class="box">
+<h2>Selamat Datang di VirtuNumber</h2>
+<p>Silahkan daftar atau login dulu untuk membuka semua fitur.</p>
+<input id="usernameInput" placeholder="Masukkan Username">
+<button onclick="loginUser()">Login / Daftar</button>
+</div>
+
+<!-- HOME -->
+<div id="home" class="box hidden">
+<h2>Halo, <span id="usernameDisplay"></span></h2>
+<button onclick="showMenu()">Menu Nokos</button>
+<button onclick="showTopup()">Top Up Coin</button>
+</div>
+
+<!-- MENU NOKOS -->
+<div id="menu" class="box hidden">
+<h2>Nokos Yang Tersedia</h2>
+<div id="nokosList">Memuat layanan...</div>
+<button onclick="showHome()">Kembali</button>
+</div>
+
+<!-- TOPUP -->
+<div id="topup" class="box hidden">
+<h2>Top Up Coin</h2>
+<input id="topupAmount" type="number" placeholder="Masukkan jumlah coin">
+<button onclick="payCoin()">Bayar QRIS</button>
+<div id="qrisSection" class="hidden" style="margin-top:15px;text-align:center;">
+<h3>Scan QRIS:</h3>
+<img id="qrisImg" src="" alt="QRIS" style="width:200px;border-radius:10px;margin-bottom:10px;">
+<p>INVOICE: <span id="inv"></span></p>
+<p>JUMLAH: <span id="jumlah"></span></p>
+<p>NOMINAL COIN: <span id="coinNominal"></span></p>
+<p>ID TRANSAKSI: <span id="trxId"></span></p>
+<p>STATUS: <span id="statusTrx">Pending</span></p>
+<button onclick="checkTopup()">Check Status</button>
+</div>
+<button onclick="showHome()">Kembali</button>
+</div>
+
+<!-- BELI NOMOR -->
+<div id="buy" class="box hidden">
+<h2>DETAIL NUMBER PROCESS</h2>
+<p>NUMBER: <span id="buyNumber"></span></p>
+<p>APLIKASI: <span id="buyApp"></span></p>
+<p>OTP: <span id="buyOTP">Menunggu...</span></p>
+<p>NOMINAL: <span id="buyNominal"></span></p>
+<div class="progress-bar"><div class="progress" id="progressBar"></div></div>
+<button onclick="checkOTP()">Cek OTP</button>
+<button onclick="showHome()">Kembali</button>
+</div>
+
+</div>
+
+<!-- Sidebar Toggle -->
+<div class="toggle-menu" onclick="toggleSideMenu()">⋮</div>
+<div class="side-menu" id="sideMenu">
+<button onclick="openSettings()">Setting Account</button>
+<button onclick="showRiwayatPembelian()">Riwayat Pembelian</button>
+<button onclick="showRiwayatTopup()">Riwayat Top Up</button>
+</div>
+
+<div id="notif" class="popup"></div>
+
+<script>
+const API_PROXY = "/api/endpoint?endpoint=";
+let coin = parseInt(localStorage.getItem("coin")||0);
+let username = localStorage.getItem("username")||"";
+let currentOrder = null;
+let riwayatBeli = JSON.parse(localStorage.getItem("riwayatBeli")||"[]");
+let riwayatTopup = JSON.parse(localStorage.getItem("riwayatTopup")||"[]");
+
+// ===== UI & Coin =====
+function updateCoin(){document.getElementById("coinDisplay").innerText=coin;}
+function showPopup(msg){let n=document.getElementById("notif");n.innerText=msg;n.style.display="block";setTimeout(()=>n.style.display="none",2000);}
+function confetti(){for(let i=0;i<20;i++){let c=document.createElement("div");c.className="coin";c.style.left=Math.random()*90+"%";document.body.appendChild(c);setTimeout(()=>c.remove(),1200);}}
+
+// ===== LOGIN =====
+function loginUser(){
+let u=document.getElementById("usernameInput").value.trim();
+if(!u){alert("Masukkan username"); return;}
+username=u;
+localStorage.setItem("username",username);
+show("home");
+document.getElementById("usernameDisplay").innerText=username;
+showPopup("Login berhasil");
+updateCoin();
+}
+
+// ===== SHOW / HIDE =====
+function show(id){["login","home","menu","topup","buy"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");}
+function showHome(){show("home");}
+function showMenu(){show("menu");loadNokos();}
+function showTopup(){show("topup");}
+
+// ===== NOKOS =====
+async function loadNokos(){
+let listDiv=document.getElementById("nokosList");
+listDiv.innerHTML="Memuat layanan...";
+try{
+let res=await fetch(API_PROXY+"services");
+let data=await res.json();
+let html="";
+data.forEach(s=>{html+=`<div class="card" onclick="buyNumber('${s.id}','${s.name}',${s.price})">${s.name} — ${s.price} coin</div>`;});
+listDiv.innerHTML=html;
+}catch(e){listDiv.innerHTML="Gagal load layanan";}
+}
+
+// ===== BELI NOMOR =====
+async function buyNumber(id,name,price){
+if(coin<price){showPopup("Coin tidak cukup"); return;}
+if(!confirm(`Beli nomor untuk ${name}?`))return;
+coin-=price; localStorage.setItem("coin",coin); updateCoin();
+try{
+let res=await fetch(`${API_PROXY}getNumber?service=${id}`);
+let data=await res.json();
+currentOrder=data.order_id;
+riwayatBeli.push({number:data.number,app:name,coin:price,date:new Date().toLocaleString()});
+localStorage.setItem("riwayatBeli",JSON.stringify(riwayatBeli));
+document.getElementById("buyNumber").innerText=data.number;
+document.getElementById("buyApp").innerText=name;
+document.getElementById("buyNominal").innerText=price;
+document.getElementById("buyOTP").innerText="Menunggu...";
+show("buy");
+autoProgress();
+}catch(e){showPopup("Gagal beli nomor");}
+}
+
+// ===== OTP =====
+async function checkOTP(){
+if(!currentOrder)return;
+let res=await fetch(`${API_PROXY}status?order_id=${currentOrder}`);
+let data=await res.json();
+if(data.otp){document.getElementById("buyOTP").innerText=data.otp;showPopup("OTP Diterima 🎉");confetti();}
+else showPopup("Belum ada OTP");
+}
+
+// ===== PROGRESS BAR =====
+function autoProgress(){
+let p=document.getElementById("progressBar");
+let i=0;
+let x=setInterval(()=>{i+=2;p.style.width=i+"%";if(i>=100)clearInterval(x);},300);
+}
+
+// ===== TOPUP =====
+async function payCoin(){
+let amount=document.getElementById("topupAmount").value;
+if(!amount || amount<=0){showPopup("Masukkan jumlah coin"); return;}
+try{
+let res=await fetch(`${API_PROXY}topup?amount=${amount}`);
+let d=await res.json();
+document.getElementById("qrisImg").src=d.qr;
+document.getElementById("inv").innerText=d.invoice_id||"-";
+document.getElementById("jumlah").innerText=d.amount||amount;
+document.getElementById("coinNominal").innerText=d.coin_received||0;
+document.getElementById("trxId").innerText=d.trx_id||"-";
+document.getElementById("statusTrx").innerText="Pending";
+document.getElementById("qrisSection").classList.remove("hidden");
+showPopup("Silahkan scan QRIS");
+}catch(e){showPopup("Gagal generate QRIS");}
+}
+
+async function checkTopup(){
+let trx=document.getElementById("trxId").innerText;
+let res=await fetch(`${API_PROXY}status?trx=${trx}`);
+let d=await res.json();
+if(d.status=="PAID"){
+coin+=d.coin_received; localStorage.setItem("coin",coin); updateCoin();
+riwayatTopup.push({amount:d.coin_received,date:new Date().toLocaleString()});
+localStorage.setItem("riwayatTopup",JSON.stringify(riwayatTopup));
+showPopup("Topup Berhasil 🎉"); confetti(); document.getElementById("statusTrx").innerText="PAID";
+}else showPopup("Belum masuk");
+}
+
+// ===== SIDEBAR =====
+function toggleSideMenu(){document.getElementById("sideMenu").classList.toggle("hidden");}
+function openSettings(){alert(`Username: ${username}\nCoin: ${coin}`);}
+function showRiwayatPembelian(){let r=riwayatBeli.map(x=>`${x.date}: ${x.app} ${x.number} (${x.coin} coin)`).join("\n");alert(r||"Belum ada riwayat pembelian");}
+function showRiwayatTopup(){let r=riwayatTopup.map(x=>`${x.date}: +${x.amount} coin`).join("\n");alert(r||"Belum ada riwayat topup");}
+
+// ===== INIT =====
+updateCoin();
+if(username){document.getElementById("usernameDisplay").innerText=username;show("home");}
+</script>
+
+</body>
+  </html>

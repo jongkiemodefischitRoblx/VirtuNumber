@@ -22,8 +22,6 @@ input{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;margin-
 .popup{position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:12px 20px;border-radius:12px;display:none;z-index:1000;}
 .coin{position:fixed;width:14px;height:14px;background:gold;border-radius:50%;animation:drop 1s forwards;}
 @keyframes drop{0%{transform:translateY(0) scale(1);}100%{transform:translateY(300px) scale(0.5);opacity:0;}}
-.confetti{position:fixed;width:10px;height:10px;top:0;animation:confettiDrop 2s linear forwards;}
-@keyframes confettiDrop{0%{transform:translateY(0) rotate(0deg);}100%{transform:translateY(500px) rotate(360deg);opacity:0;}}
 .side-menu{position:fixed;top:80px;right:10px;background:white;border-radius:12px;padding:10px;display:none;box-shadow:0 2px 12px rgba(0,0,0,0.15);z-index:999;}
 .side-menu button{display:block;width:100%;margin-bottom:8px;transition:0.2s;}
 .side-menu button:hover{background:#e0e7ff;}
@@ -144,7 +142,7 @@ let data=await res.json();
 let html="";
 data.forEach(s=>{html+=`<div class="card" onclick="buyNumber('${s.id}','${s.name}',${s.price})">${s.name} — ${s.price} coin</div>`;});
 listDiv.innerHTML=html;
-}catch(e){listDiv.innerHTML="Gagal load layanan";}
+}catch(e){listDiv.innerHTML="Gagal load layanan";console.error(e);}
 }
 
 // ===== BELI NOMOR =====
@@ -164,7 +162,7 @@ document.getElementById("buyNominal").innerText=price;
 document.getElementById("buyOTP").innerText="Menunggu...";
 show("buy");
 autoProgress();
-}catch(e){showPopup("Gagal beli nomor");}
+}catch(e){showPopup("Gagal beli nomor");console.error(e);}
 }
 
 // ===== OTP =====
@@ -198,7 +196,7 @@ document.getElementById("trxId").innerText=d.trx_id||"-";
 document.getElementById("statusTrx").innerText="Pending";
 document.getElementById("qrisSection").classList.remove("hidden");
 showPopup("Silahkan scan QRIS");
-}catch(e){showPopup("Gagal generate QRIS");}
+}catch(e){showPopup("Gagal generate QRIS");console.error(e);}
 }
 
 async function checkTopup(){
@@ -225,4 +223,4 @@ if(username){document.getElementById("usernameDisplay").innerText=username;show(
 </script>
 
 </body>
-  </html>
+</html>
